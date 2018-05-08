@@ -49,30 +49,82 @@ class HomoCitationAnalysis:
         academic_network = nx.read_gpickle(self.network_path)
         academic_network = self.init_iter_num(academic_network)
         source_list, terminus_list = self.find_source_and_terminus(academic_network)
+        print(len(source_list))
+        print(len(terminus_list))
         for s in source_list:
             for t in terminus_list:
                 paths = list(nx.all_simple_paths(academic_network, s, t))
-                if len(paths) == 0:
-                    continue
-                else:
+                if len(paths) != 0:
+                    print(len(paths))
                     for path in paths:
                         for i in range(len(path) - 1):
                             # spc
-                            academic_network[path[i]][path[i+1]]['iter_num_spc'] = academic_network[path[i]][path[i+1]]['iter_num_spc'] + 1
-                            academic_network[path[i]][path[i+1]]['iter_num_back_spc'] = 1.0 / academic_network[path[i]][path[i+1]]['iter_num_spc']
+                            academic_network[path[i]][path[i+1]]['iter_num_spc'] = \
+                                academic_network[path[i]][path[i+1]]['iter_num_spc'] + 1
+                            academic_network[path[i]][path[i+1]]['iter_num_back_spc'] = \
+                                1.0 / academic_network[path[i]][path[i+1]]['iter_num_spc']
                             # nppc
-                            academic_network[path[i]][path[i + 1]]['iter_num_nppc'] = academic_network[path[i]][path[i + 1]]['iter_num_nppc'] + len(path) - i - 1
-                            academic_network[path[i]][path[i + 1]]['iter_num_back_nppc'] = 1.0 / academic_network[path[i]][path[i + 1]]['iter_num_nppc']
+                            academic_network[path[i]][path[i + 1]]['iter_num_nppc'] = \
+                                academic_network[path[i]][path[i + 1]]['iter_num_nppc'] + len(path) - i - 1
+                            academic_network[path[i]][path[i + 1]]['iter_num_back_nppc'] = \
+                                1.0 / academic_network[path[i]][path[i + 1]]['iter_num_nppc']
                             # splc
-                            academic_network[path[i]][path[i + 1]]['iter_num_splc'] = academic_network[path[i]][path[i + 1]]['iter_num_splc'] + len(path) - 1
-                            academic_network[path[i]][path[i + 1]]['iter_num_back_splc'] = 1.0 / academic_network[path[i]][path[i + 1]]['iter_num_splc']
+                            academic_network[path[i]][path[i + 1]]['iter_num_splc'] = \
+                                academic_network[path[i]][path[i + 1]]['iter_num_splc'] + len(path) - 1
+                            academic_network[path[i]][path[i + 1]]['iter_num_back_splc'] = \
+                                1.0 / academic_network[path[i]][path[i + 1]]['iter_num_splc']
                             # spnp
-                            academic_network[path[i]][path[i + 1]]['iter_num_spnp'] = academic_network[path[i]][path[i + 1]]['iter_num_spnp'] + len(path) + i
-                            academic_network[path[i]][path[i + 1]]['iter_num_back_spnp'] = 1.0 / academic_network[path[i]][path[i + 1]]['iter_num_spnp']
-        spc_main_path = nx.shortest_path()
+                            academic_network[path[i]][path[i + 1]]['iter_num_spnp'] = \
+                                academic_network[path[i]][path[i + 1]]['iter_num_spnp'] + i + 1
+                            academic_network[path[i]][path[i + 1]]['iter_num_back_spnp'] = \
+                                1.0 / academic_network[path[i]][path[i + 1]]['iter_num_spnp']
+        file_path_spc = 'data/path_spc.txt'
+        file_path_nppc = 'data/path_nppc.txt'
+        file_path_splc = 'data/path_splc.txt'
+        file_path_spnp = 'data/path_spnp.txt'
+        for source_node in source_list:
+            for terminus_node in terminus_list:
+                path_spc = list(nx.shortest_path(academic_network, source_node, terminus_node,
+                                                 weight='iter_num_back_spc'))
+                path_nppc = list(nx.shortest_path(academic_network, source_node, terminus_node,
+                                                  weight='iter_num_back_nppc'))
+                path_splc = list(nx.shortest_path(academic_network, source_node, terminus_node,
+                                                  weight='iter_num_back_splc'))
+                path_spnp = list(nx.shortest_path(academic_network, source_node, terminus_node,
+                                                  weight='iter_num_back_spnp'))
+                with open(file_path_spc, 'a') as f_spc:
+                    for i in range(len(path_spc)):
+                        f_spc.write(' '.join(path_spc[i]) + '\n')
+                with open(file_path_nppc, 'a') as f_nppc:
+                    for i in range(len(path_nppc)):
+                        f_nppc.write(' '.join(path_nppc[i]) + '\n')
+                with open(file_path_splc, 'a') as f_splc:
+                    for i in range(len(path_splc)):
+                        f_splc.write(' '.join(path_splc[i]) + '\n')
+                with open(file_path_spnp, 'a') as f_spnp:
+                    for i in range(len(path_spnp)):
+                        f_spnp.write(' '.join(path_spnp[i]) + '\n')
         nx.write_gpickle(nx.write_gpickle(academic_network, 'data/homo_academic_network_local.gpickle'))
 
+    '''
+    全局主路径（Global Main Path）
+    GMPA方法与LMPA方法相比，更加关注引文路径在整体知识流动中的重要作用，主要流程如下：
+    1、由搜索路径数（SPC）方法产生遍历数，生成全局主路径
+    2、将生成的全局主路径经过的节点及其连边从专利网中抽取联通子图
+    '''
+    def GMPA(self):
+        file_path_spc = 'data/path_spc.txt'
+        G = nx.read_gpickle('data/homo_academic_network_local.gpickle')
+        with open(file_path_spc) as f_spc:
+            lines = f_spc.readlines()
+        nodes = list()
+        for line in lines:
+            nodes.extend(line)
+        sub_G = G.subgraph(nodes)
+        nx.write_gpickle(sub_G, 'data/homo_academic_network_GMPA.gpickle')
+
+    def
 
 
 hca = HomoCitationAnalysis('data/homo_academic_network.gpickle')
-hca.NPPC()
+hca.local_main_path_analysis()
