@@ -55,7 +55,7 @@ class HomoCitationAnalysis:
             for t in terminus_list:
                 paths = list(nx.all_simple_paths(academic_network, s, t))
                 if len(paths) != 0:
-                    print(len(paths))
+                    print(paths)
                     for path in paths:
                         for i in range(len(path) - 1):
                             # spc
@@ -78,33 +78,36 @@ class HomoCitationAnalysis:
                                 academic_network[path[i]][path[i + 1]]['iter_num_spnp'] + i + 1
                             academic_network[path[i]][path[i + 1]]['iter_num_back_spnp'] = \
                                 1.0 / academic_network[path[i]][path[i + 1]]['iter_num_spnp']
+        nx.write_gpickle(nx.write_gpickle(academic_network, 'data/homo_academic_network_local.gpickle'))
         file_path_spc = 'data/path_spc.txt'
         file_path_nppc = 'data/path_nppc.txt'
         file_path_splc = 'data/path_splc.txt'
         file_path_spnp = 'data/path_spnp.txt'
         for source_node in source_list:
             for terminus_node in terminus_list:
-                path_spc = list(nx.shortest_path(academic_network, source_node, terminus_node,
-                                                 weight='iter_num_back_spc'))
-                path_nppc = list(nx.shortest_path(academic_network, source_node, terminus_node,
-                                                  weight='iter_num_back_nppc'))
-                path_splc = list(nx.shortest_path(academic_network, source_node, terminus_node,
-                                                  weight='iter_num_back_splc'))
-                path_spnp = list(nx.shortest_path(academic_network, source_node, terminus_node,
-                                                  weight='iter_num_back_spnp'))
-                with open(file_path_spc, 'a') as f_spc:
-                    for i in range(len(path_spc)):
-                        f_spc.write(' '.join(path_spc[i]) + '\n')
-                with open(file_path_nppc, 'a') as f_nppc:
-                    for i in range(len(path_nppc)):
-                        f_nppc.write(' '.join(path_nppc[i]) + '\n')
-                with open(file_path_splc, 'a') as f_splc:
-                    for i in range(len(path_splc)):
-                        f_splc.write(' '.join(path_splc[i]) + '\n')
-                with open(file_path_spnp, 'a') as f_spnp:
-                    for i in range(len(path_spnp)):
-                        f_spnp.write(' '.join(path_spnp[i]) + '\n')
-        nx.write_gpickle(nx.write_gpickle(academic_network, 'data/homo_academic_network_local.gpickle'))
+                paths = list(nx.all_simple_paths(academic_network, source_node, terminus_node))
+                if len(paths) != 0:
+                    path_spc = list(nx.shortest_path(academic_network, source_node, terminus_node,
+                                                     weight='iter_num_back_spc'))
+                    path_nppc = list(nx.shortest_path(academic_network, source_node, terminus_node,
+                                                      weight='iter_num_back_nppc'))
+                    path_splc = list(nx.shortest_path(academic_network, source_node, terminus_node,
+                                                      weight='iter_num_back_splc'))
+                    path_spnp = list(nx.shortest_path(academic_network, source_node, terminus_node,
+                                                      weight='iter_num_back_spnp'))
+                    with open(file_path_spc, 'a') as f_spc:
+                        for i in range(len(path_spc)):
+                            f_spc.write(path_spc[i] + '\n')
+                    with open(file_path_nppc, 'a') as f_nppc:
+                        for i in range(len(path_nppc)):
+                            f_nppc.write(path_nppc[i] + '\n')
+                    with open(file_path_splc, 'a') as f_splc:
+                        for i in range(len(path_splc)):
+                            f_splc.write(path_splc[i] + '\n')
+                    with open(file_path_spnp, 'a') as f_spnp:
+                        for i in range(len(path_spnp)):
+                            f_spnp.write(path_spnp[i] + '\n')
+
 
     '''
     全局主路径（Global Main Path）
@@ -123,7 +126,6 @@ class HomoCitationAnalysis:
         sub_G = G.subgraph(nodes)
         nx.write_gpickle(sub_G, 'data/homo_academic_network_GMPA.gpickle')
 
-    def
 
 
 hca = HomoCitationAnalysis('data/homo_academic_network.gpickle')
