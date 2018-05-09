@@ -43,7 +43,7 @@ class HomoCitationAnalysis:
         return source_list, terminus_list
 
     '''
-    局部主路径（nppc,splc,spnp,spc）
+    局部遍历权重计算模型（nppc,splc,spnp,spc）
     '''
     def local_main_path_analysis(self):
         academic_network = nx.read_gpickle(self.network_path)
@@ -78,7 +78,15 @@ class HomoCitationAnalysis:
                                 academic_network[path[i]][path[i + 1]]['iter_num_spnp'] + i + 1
                             academic_network[path[i]][path[i + 1]]['iter_num_back_spnp'] = \
                                 1.0 / academic_network[path[i]][path[i + 1]]['iter_num_spnp']
-        nx.write_gpickle(nx.write_gpickle(academic_network, 'data/homo_academic_network_local.gpickle'))
+        nx.write_gpickle(academic_network, 'data/homo_academic_network_local.gpickle')
+
+    '''
+    局部主路径搜索
+    搜索原则：总是按照遍历权重最大的边游走
+    '''
+    def find_local_main_path(self):
+        academic_network = nx.read_gpickle('data/homo_academic_network_local.gpickle')
+        source_list, terminus_list = self.find_source_and_terminus(academic_network)
         file_path_spc = 'data/path_spc.txt'
         file_path_nppc = 'data/path_nppc.txt'
         file_path_splc = 'data/path_splc.txt'
@@ -97,16 +105,20 @@ class HomoCitationAnalysis:
                                                       weight='iter_num_back_spnp'))
                     with open(file_path_spc, 'a') as f_spc:
                         for i in range(len(path_spc)):
-                            f_spc.write(path_spc[i] + '\n')
+                            f_spc.write(path_spc[i] + '  ')
+                        f_spc.write('\n')
                     with open(file_path_nppc, 'a') as f_nppc:
                         for i in range(len(path_nppc)):
-                            f_nppc.write(path_nppc[i] + '\n')
+                            f_nppc.write(path_nppc[i] + '  ')
+                        f_nppc.write('\n')
                     with open(file_path_splc, 'a') as f_splc:
                         for i in range(len(path_splc)):
-                            f_splc.write(path_splc[i] + '\n')
+                            f_splc.write(path_splc[i] + '  ')
+                        f_splc.write('\n')
                     with open(file_path_spnp, 'a') as f_spnp:
                         for i in range(len(path_spnp)):
-                            f_spnp.write(path_spnp[i] + '\n')
+                            f_spnp.write(path_spnp[i] + '  ')
+                        f_spnp.write('\n')
 
 
     '''
@@ -126,6 +138,26 @@ class HomoCitationAnalysis:
         sub_G = G.subgraph(nodes)
         nx.write_gpickle(sub_G, 'data/homo_academic_network_GMPA.gpickle')
 
+    '''
+    K-route主路径（K-route Main Path Analysis）
+    初始化K个具有最大遍历数的链接，以每条链接为中心，以遍历数为优先权，在引文网络中双向随机游走，
+    直至抵达源点和会点，生成K-route主路径。多重主路径与全局主路径相比，除了搜索最重要的引文路径
+    还会搜索遍历数累加和小于最大遍历数累加和的若干重要路径
+    '''
+    def k_route_MPA(self, k):
+        G = nx.read_gpickle('data/homo_academic_network_local.gpickle')
+        source_list, terminus_list = self.find_source_and_terminus(G)
+        edges = G.edges(data=True)
+        edges.sort(key=lambda x: x[2]['iter_num_spc'], reverse=True)
+        edges = edges[0: k]
+        left_nodes = [i[0] for i in edges]
+        right_nodes = [i[1] for i in edges]
+        left_path_nodes = nx.current_flow_betweenness_centrality_subset\
+            (G, sources=left_nodes, targets=source_list).keys()
+        right_path_nodes = nx.current_flow_betweenness_centrality_subset\
+            (G, sources=right_nodes, targets=terminus_list).keys()
+        sub_G = G.subgraph(set(left_path_nodes.extend(right_path_nodes)))
+        nx.write_gpickle(sub_G, 'data/homo_academic_network_GMPA.gpickle')
 
 
 hca = HomoCitationAnalysis('data/homo_academic_network.gpickle')

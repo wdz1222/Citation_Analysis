@@ -1,6 +1,7 @@
 import networkx as nx
 import pandas as pd
 import matplotlib.pyplot as plt
+import time
 
 
 class CreateHomoAcademicNetwork:
@@ -16,21 +17,41 @@ class CreateHomoAcademicNetwork:
     需要注意：
     1、同构学术网络仅存在专利节点
     2、相同专利可能有不同的专利号，以不同专利号生成新的学术网络节点，被引专利同时指向不同
+    3、利用专利的申请日期，计算不同引用之间的引用时间差，便于挖掘
     专利号生成的专利节点
     '''
     def create_homo_academic_network(self):
         df = pd.read_excel(self.data_path, sheetname=0)
         col_num = df.shape[0]
         homo_G = nx.DiGraph()
+        print()
         for i in range(col_num):
-            if pd.isnull(df.loc[i, 'CP']):
-                homo_G.add_nodes_from(df.loc[i, 'PN'].split('; '))
-            else:
-                cited_list = df.loc[i, 'CP'].split('--')[1].split(';')
+            patent_infos = df.loc[i, 'PD'].split(';  ')
+            for patent_info in patent_infos:
+                patent_info_detail = patent_info.split('   ')
+                application_time = time.mktime(time.strptime(patent_info_detail[1], "%d %b %Y"))/3600.0
+                homo_G.add_node(patent_info_detail[0], application_time=application_time)
+            if not pd.isnull(df.loc[i, 'CP']):
                 patent_id = df.loc[i, 'PN'].split('; ')
+                cited_infos = df.loc[i, 'CP'].split('--')[1].split(';  ')
+                cited_list = [ci.strip().split('   ')[0] for ci in cited_infos]
+                cited_list = list(filter(lambda x: len(x.split(' ')) == 1, cited_list))
                 for cited_element in cited_list:
                     for pid in patent_id:
-                        homo_G.add_edge(cited_element.strip().split(' ')[0], pid)
+                        homo_G.add_edge(cited_element, pid)
+        sum_time_difference = 0
+        count = 0.0
+        for edge in homo_G.edges():
+            if 'application_time' in homo_G.node[edge[0]] and 'application_time' in homo_G.node[edge[1]]:
+                time_difference = abs(homo_G.node[edge[0]]['application_time'] - homo_G.node[edge[1]]['application_time'])
+                homo_G[edge[0]][edge[1]]['time_difference'] = time_difference
+                count += 1
+                sum_time_difference += time_difference
+        ave_time_difference = sum_time_difference/count
+        print(count)
+        for edge in homo_G.edges():
+            if not 'time_difference' in homo_G[edge[0]][edge[1]]:
+                homo_G[edge[0]][edge[1]]['time_difference'] = ave_time_difference
         nx.write_gpickle(homo_G, 'data/homo_academic_network.gpickle')
         return homo_G
 
