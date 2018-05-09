@@ -161,4 +161,5 @@ class HomoCitationAnalysis:
 
 
 hca = HomoCitationAnalysis('data/homo_academic_network.gpickle')
-hca.local_main_path_analysis()
+# hca.local_main_path_analysis()
+hca.find_local_main_path()

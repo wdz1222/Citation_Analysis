@@ -58,10 +58,12 @@ class CreateHomoAcademicNetwork:
     '''
     根据同质网络进行绘图
     '''
-    def plot_homo_academic_network(self):
-        nx.draw(self.homo_academic_network, pos=nx.spring_layout(self.homo_academic_network))
+    @staticmethod
+    def plot_homo_academic_network(network_path):
+        G = nx.read_gpickle(network_path)
+        nx.draw(G, pos=nx.spring_layout(G))
         plt.draw()
 
 
-chan = CreateHomoAcademicNetwork('data/experiment_data.xlsx')
-# chan.plot_homo_academic_network()
+# chan = CreateHomoAcademicNetwork('data/experiment_data.xlsx')
+CreateHomoAcademicNetwork.plot_homo_academic_network('data/homo_academic_network.gpickle')
